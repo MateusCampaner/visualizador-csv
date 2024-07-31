@@ -1,151 +1,100 @@
-import streamlit as st
+import altair as alt
+import numpy as np
 import pandas as pd
+import streamlit as st
 import math
-from pathlib import Path
+import seaborn as sns
+import matplotlib.pyplot as plt
+import base64
+import sqlite3
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
+st.set_page_config(page_title='Visualizador de CSVs', page_icon='📝')
+
+st.sidebar.header("📝 Visualizador de CSVs")
+
+def download_csv(df):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode() 
+    href = f'<a href="data:file/csv;base64,{b64}" download="dados_filtrados.csv">Download do CSV</a>'
+    return href
+
+pagina = st.sidebar.selectbox(
+    "Escolha",
+    ('Visualizar CSV', 'Consulta SQL em CSVs')
 )
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+if pagina == "Visualizar CSV":
+    st.header("📊 Visualizar CSV")
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+    st.subheader('Upload de CSV')
+    uploaded_file = st.file_uploader("Escolha um arquivo CSV", type=['csv'])
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
+        st.write("Dados do arquivo CSV:")
 
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[gdp_df['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[gdp_df['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
+        selected_columns = st.multiselect(
+            'Selecione as colunas para exibir',
+            options=df.columns.tolist(),
+            default=df.columns.tolist()
         )
+
+        if selected_columns:
+            df_filtered = df[selected_columns]
+            st.write(df_filtered)
+
+            st.session_state['df_filtered'] = df_filtered
+
+        st.write("Selecione uma coluna para visualizar mais informações:")
+        coluna_selecionada = st.selectbox(
+            "Escolha uma coluna",
+            options=df.columns.tolist()
+        )
+
+        if coluna_selecionada:
+
+            valores_unicos = df[coluna_selecionada].unique()
+            st.write(f"Valores únicos de '{coluna_selecionada}':")
+            st.write(valores_unicos)
+
+            quantidade_valores_unicos = df[coluna_selecionada].nunique()
+            st.write(f"Quantidade de valores únicos em '{coluna_selecionada}': {quantidade_valores_unicos}")
+
+            quantidade_linhas = df.shape[0]
+            st.write(f"Quantidade total de linhas no DataFrame: {quantidade_linhas}")
+
+if pagina == "Consulta SQL em CSVs":
+
+    st.title("Consulta SQL em CSVs")
+
+    def load_csv(file):
+        df = pd.read_csv(file)
+        return df
+
+    def execute_sql_query(dfs, query):
+        with sqlite3.connect(":memory:") as conn:
+            for i, df in enumerate(dfs):
+                df.to_sql(f'data{i+1}', conn, index=False, if_exists='replace')
+            result = pd.read_sql_query(query, conn)
+        return result
+
+    uploaded_files = st.file_uploader("Escolha até 3 arquivos CSV", type="csv", accept_multiple_files=True)
+
+    if uploaded_files:
+        dfs = [load_csv(file) for file in uploaded_files]
+        for i, df in enumerate(dfs):
+            st.write(f"Dados do CSV {i+1} carregado:")
+            st.write(df)
+        
+        query = st.text_area(height=300, label="Consulta SQL")
+        
+        if st.button("Executar Consulta"):
+            try:
+                result = execute_sql_query(dfs, query)
+                st.write("Resultado da consulta:")
+                st.write(result)
+            except Exception as e:
+                st.error(f"Erro ao executar a consulta: {e}")
+
