@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import base64
 import sqlite3
+import pyperclip
 
 st.set_page_config(page_title='Visualizador de CSVs', page_icon='📝')
 
@@ -60,6 +61,12 @@ if pagina == "Visualizar CSV":
             quantidade_linhas = df.shape[0]
             st.write(f"Quantidade total de linhas no DataFrame: {quantidade_linhas}")
 
+            valores_unicos_str = ', '.join(map(str, valores_unicos))
+
+        if st.button("Copiar valores únicos para a área de transferência"):
+            pyperclip.copy(valores_unicos_str)
+            st.write("Valores únicos copiados para a área de transferência!")
+
 if pagina == "Consulta SQL em CSVs":
 
     st.title("Consulta SQL em CSVs")
@@ -90,6 +97,15 @@ if pagina == "Consulta SQL em CSVs":
                 result = execute_sql_query(dfs, query)
                 st.write("Resultado da consulta:")
                 st.write(result)
+
+                valores_str = result.to_csv(index=False)  
+
+                if st.button("Copiar dados para a área de transferência"):
+                    pyperclip.copy(valores_str)
+                    st.write("Dados copiados para a área de transferência!")
+                    
             except Exception as e:
                 st.error(f"Erro ao executar a consulta: {e}")
+
+            
 
