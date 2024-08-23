@@ -3,6 +3,7 @@ import streamlit as st
 import base64
 import sqlite3
 import pyperclip
+from streamlit_extras.metric_cards import style_metric_cards
 
 st.set_page_config(page_title='Visualizador de CSVs', page_icon='📝')
 
@@ -56,10 +57,15 @@ if pagina == "Visualizar CSV":
             st.write(valores_unicos)
 
             quantidade_valores_unicos = df[coluna_selecionada].nunique()
-            st.write(f"Quantidade de valores únicos em '{coluna_selecionada}': {quantidade_valores_unicos}")
+            #st.write(f"Quantidade de valores únicos em '{coluna_selecionada}': {quantidade_valores_unicos}") 
 
             quantidade_linhas = df.shape[0]
-            st.write(f"Quantidade total de linhas no DataFrame: {quantidade_linhas}")
+            #t.write(f"Quantidade total de linhas no DataFrame: {quantidade_linhas}")
+
+            qtd_unicos, qtd_linhas = st.columns(2)
+
+            qtd_unicos.metric(label=f"Quantidade de valores únicos em {coluna_selecionada}", value=quantidade_valores_unicos)
+            qtd_linhas.metric(label="Quantidade total de linhas no DataFrame", value=quantidade_linhas)
 
             valores_unicos_str = ', '.join(map(str, valores_unicos))
 
@@ -68,8 +74,7 @@ if pagina == "Visualizar CSV":
             st.write("Valores únicos copiados para a área de transferência!")
 
 if pagina == "Consulta SQL em CSVs":
-
-    st.title("Consulta SQL em CSVs")
+    st.title("🎲 Consulta SQL em CSVs")
 
     def load_csv(file):
         df = pd.read_csv(file)
