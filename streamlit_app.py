@@ -3,7 +3,6 @@ import streamlit as st
 import sqlite3
 import pyperclip
 import gdown
-import io
 
 st.set_page_config(page_title='Visualizador de Arquivos', page_icon='📝')
 
@@ -28,7 +27,7 @@ def display_data(df, page_size=50000):
     end = start + page_size
     st.write(df[start:end])
 
-if st.session_state.page == "Visualizar Arquivos":
+if 'page' in st.session_state and st.session_state.page == "Visualizar Arquivos":
     st.header("📊 Visualizar Arquivo")
 
     st.subheader('Upload de Arquivo')
@@ -42,98 +41,109 @@ if st.session_state.page == "Visualizar Arquivos":
             elif uploaded_file.name.endswith('.xlsx'):
                 df = pd.read_excel(uploaded_file)
             
-            st.write("Dados do arquivo:")
+            if df.empty:
+                st.warning("O arquivo está vazio ou não contém dados válidos.")
+            else:
+                st.write("Dados do arquivo:")
+                selected_columns = st.multiselect(
+                    'Selecione as colunas para exibir',
+                    options=df.columns.tolist(),
+                    default=df.columns.tolist()
+                )
 
-            selected_columns = st.multiselect(
-                'Selecione as colunas para exibir',
-                options=df.columns.tolist(),
-                default=df.columns.tolist()
-            )
+                if selected_columns:
+                    df_filtered = df[selected_columns]
+                    st.session_state['df_filtered'] = df_filtered
+                    st.write(df_filtered)
 
-            if selected_columns:
-                df_filtered = df[selected_columns]
-                display_data(df_filtered)
+                st.write("Selecione uma coluna para visualizar mais informações:")
+                coluna_selecionada = st.selectbox(
+                    "Escolha uma coluna",
+                    options=df.columns.tolist()
+                )
 
-                st.session_state['df_filtered'] = df_filtered
+                if coluna_selecionada:
+                    valores_unicos = df[coluna_selecionada].unique()
+                    st.write(f"Valores únicos de '{coluna_selecionada}':")
+                    st.write(valores_unicos)
 
-            st.write("Selecione uma coluna para visualizar mais informações:")
-            coluna_selecionada = st.selectbox(
-                "Escolha uma coluna",
-                options=df.columns.tolist()
-            )
+                    quantidade_valores_unicos = df[coluna_selecionada].nunique()
+                    quantidade_linhas = df.shape[0]
 
-            if coluna_selecionada:
-                valores_unicos = df[coluna_selecionada].unique()
-                st.write(f"Valores únicos de '{coluna_selecionada}':")
-                st.write(valores_unicos)
+                    qtd_unicos, qtd_linhas = st.columns(2)
+                    qtd_unicos.metric(label=f"Quantidade de valores únicos em {coluna_selecionada}", value=quantidade_valores_unicos)
+                    qtd_linhas.metric(label="Quantidade total de linhas no DataFrame", value=quantidade_linhas)
 
-                quantidade_valores_unicos = df[coluna_selecionada].nunique()
-                quantidade_linhas = df.shape[0]
+                    valores_unicos_str = ', '.join(map(str, valores_unicos))
 
-                qtd_unicos, qtd_linhas = st.columns(2)
-                qtd_unicos.metric(label=f"Quantidade de valores únicos em {coluna_selecionada}", value=quantidade_valores_unicos)
-                qtd_linhas.metric(label="Quantidade total de linhas no DataFrame", value=quantidade_linhas)
-
-                valores_unicos_str = ', '.join(map(str, valores_unicos))
-
-                if st.button("Copiar valores únicos para a área de transferência"):
-                    pyperclip.copy(valores_unicos_str)
-                    st.write("Valores únicos copiados para a área de transferência!")
+                    if st.button("Copiar valores únicos para a área de transferência"):
+                        pyperclip.copy(valores_unicos_str)
+                        st.write("Valores únicos copiados para a área de transferência!")
         except Exception as e:
             st.error(f"Erro ao processar o arquivo: {e}")
+            
 
 elif st.session_state.page == "Ler do Google Drive":
     st.header("📂 Ler Arquivo do Google Drive")
 
     st.subheader('Insira o link do arquivo do Google Drive')
-    drive_link = st.text_input("Link do Google Drive", placeholder="https://drive.google.com/uc?id=FILE_ID")
+    drive_link = st.text_input("Link do Google Drive", placeholder="https://drive.google.com/file/d/FILE_ID/view?usp=sharing")
 
     if drive_link:
         try:
-            file_id = drive_link.split('id=')[-1]
-            url = f'https://drive.google.com/uc?id={file_id}'
-            output = 'file_from_drive.csv'
-            
-            gdown.download(url, output, quiet=False)
+            # Extraindo o file_id a partir do link completo
+            file_id = None
+            if 'id=' in drive_link:
+                file_id = drive_link.split('id=')[-1]
+            elif '/d/' in drive_link:
+                file_id = drive_link.split('/d/')[-1].split('/')[0]
 
-            df = pd.read_csv(output)
-            st.write("Dados do arquivo:")
+            if file_id:
+                url = f'https://drive.google.com/uc?id={file_id}'
+                output = 'file_from_drive.csv'
+                
+                gdown.download(url, output, quiet=False)
 
-            selected_columns = st.multiselect(
-                'Selecione as colunas para exibir',
-                options=df.columns.tolist(),
-                default=df.columns.tolist()
-            )
+                df = pd.read_csv(output)
+                st.write("Dados do arquivo:")
 
-            if selected_columns:
-                df_filtered = df[selected_columns]
-                display_data(df_filtered)
+                selected_columns = st.multiselect(
+                    'Selecione as colunas para exibir',
+                    options=df.columns.tolist(),
+                    default=df.columns.tolist()
+                )
 
-                st.session_state['df_filtered'] = df_filtered
+                if selected_columns:
+                    df_filtered = df[selected_columns]
+                    display_data(df_filtered)
 
-            st.write("Selecione uma coluna para visualizar mais informações:")
-            coluna_selecionada = st.selectbox(
-                "Escolha uma coluna",
-                options=df.columns.tolist()
-            )
+                    st.session_state['df_filtered'] = df_filtered
 
-            if coluna_selecionada:
-                valores_unicos = df[coluna_selecionada].unique()
-                st.write(f"Valores únicos de '{coluna_selecionada}':")
-                st.write(valores_unicos)
+                st.write("Selecione uma coluna para visualizar mais informações:")
+                coluna_selecionada = st.selectbox(
+                    "Escolha uma coluna",
+                    options=df.columns.tolist()
+                )
 
-                quantidade_valores_unicos = df[coluna_selecionada].nunique()
-                quantidade_linhas = df.shape[0]
+                if coluna_selecionada:
+                    valores_unicos = df[coluna_selecionada].unique()
+                    st.write(f"Valores únicos de '{coluna_selecionada}':")
+                    st.write(valores_unicos)
 
-                qtd_unicos, qtd_linhas = st.columns(2)
-                qtd_unicos.metric(label=f"Quantidade de valores únicos em {coluna_selecionada}", value=quantidade_valores_unicos)
-                qtd_linhas.metric(label="Quantidade total de linhas no DataFrame", value=quantidade_linhas)
+                    quantidade_valores_unicos = df[coluna_selecionada].nunique()
+                    quantidade_linhas = df.shape[0]
 
-                valores_unicos_str = ', '.join(map(str, valores_unicos))
+                    qtd_unicos, qtd_linhas = st.columns(2)
+                    qtd_unicos.metric(label=f"Quantidade de valores únicos em {coluna_selecionada}", value=quantidade_valores_unicos)
+                    qtd_linhas.metric(label="Quantidade total de linhas no DataFrame", value=quantidade_linhas)
 
-                if st.button("Copiar valores únicos para a área de transferência"):
-                    pyperclip.copy(valores_unicos_str)
-                    st.write("Valores únicos copiados para a área de transferência!")
+                    valores_unicos_str = ', '.join(map(str, valores_unicos))
+
+                    if st.button("Copiar valores únicos para a área de transferência"):
+                        pyperclip.copy(valores_unicos_str)
+                        st.write("Valores únicos copiados para a área de transferência!")
+            else:
+                st.error("Link inválido. Por favor, insira um link correto do Google Drive.")
         except Exception as e:
             st.error(f"Erro ao processar o arquivo do Google Drive: {e}")
 
@@ -159,7 +169,7 @@ elif st.session_state.page == "Consulta SQL em CSVs":
             result = pd.read_sql_query(query, conn)
         return result
 
-    uploaded_files = st.file_uploader("Escolha até 3 arquivos CSV ou XLSX", type=["csv", "xlsx"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Escolha seus arquivos CSV ou XLSX", type=["csv", "xlsx"], accept_multiple_files=True)
 
     if uploaded_files:
         dfs = []
@@ -168,10 +178,9 @@ elif st.session_state.page == "Consulta SQL em CSVs":
             if df is not None:
                 dfs.append(df)
                 st.write(f"Dados do arquivo {file.name} carregado:")
-                display_data(df)
-        
+
         query = st.text_area("Consulta SQL", height=300)
-        
+
         if st.button("Executar Consulta"):
             try:
                 result = execute_sql_query(dfs, query)
