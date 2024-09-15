@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import sqlite3
 import gdown
+import io
 
 st.set_page_config(page_title='Visualizador de Arquivos', page_icon='📝')
 
@@ -157,7 +158,7 @@ elif st.session_state.page == "Consulta SQL em CSVs":
             st.error("Formato de arquivo não suportado!")
             return None
         return df
-
+    
     def execute_sql_query(dfs, query):
         with sqlite3.connect(":memory:") as conn:
             for i, df in enumerate(dfs):
@@ -175,6 +176,16 @@ elif st.session_state.page == "Consulta SQL em CSVs":
                 dfs.append(df)
                 st.write(f"Dados do arquivo {file.name} carregado:")
 
+                selected_columns = st.multiselect(
+                    'Selecione as colunas para exibir',
+                    options=df.columns.tolist(),
+                    default=df.columns.tolist()
+                )
+
+                if selected_columns:
+                    df_filtered = df[selected_columns]
+                    st.write(df_filtered)
+
         query = st.text_area("Consulta SQL", height=300)
 
         if st.button("Executar Consulta"):
@@ -184,8 +195,8 @@ elif st.session_state.page == "Consulta SQL em CSVs":
                 st.write(result)
 
                 valores_str = result.to_csv(index=False)
-
-                st.text_area("Copie o texto abaixo:", value=valores_unicos_str)
                     
             except Exception as e:
                 st.error(f"Erro ao executar a consulta: {e}")
+
+
