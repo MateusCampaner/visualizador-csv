@@ -1,4 +1,4 @@
-pyperclip==1.9.0
+pyperclip==0.0.4
 streamlit-extras==0.4.3
 openpyxl==3.1.5
 gdown==5.2.0

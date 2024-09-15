@@ -1,8 +1,8 @@
 import pandas as pd
 import streamlit as st
 import sqlite3
-import pyperclip
 import gdown
+import clipboard
 
 st.set_page_config(page_title='Visualizador de Arquivos', page_icon='📝')
 
@@ -77,7 +77,7 @@ if 'page' in st.session_state and st.session_state.page == "Visualizar Arquivos"
                     valores_unicos_str = ', '.join(map(str, valores_unicos))
 
                     if st.button("Copiar valores únicos para a área de transferência"):
-                        pyperclip.copy(valores_unicos_str)
+                        clipboard.copy(valores_unicos_str)
                         st.write("Valores únicos copiados para a área de transferência!")
         except Exception as e:
             st.error(f"Erro ao processar o arquivo: {e}")
@@ -140,7 +140,7 @@ elif st.session_state.page == "Ler do Google Drive":
                     valores_unicos_str = ', '.join(map(str, valores_unicos))
 
                     if st.button("Copiar valores únicos para a área de transferência"):
-                        pyperclip.copy(valores_unicos_str)
+                        clipboard.copy(valores_unicos_str)
                         st.write("Valores únicos copiados para a área de transferência!")
             else:
                 st.error("Link inválido. Por favor, insira um link correto do Google Drive.")
@@ -190,7 +190,7 @@ elif st.session_state.page == "Consulta SQL em CSVs":
                 valores_str = result.to_csv(index=False)
 
                 if st.button("Copiar dados para a área de transferência"):
-                    pyperclip.copy(valores_str)
+                    clipboard.copy(valores_str)
                     st.write("Dados copiados para a área de transferência!")
                     
             except Exception as e:
