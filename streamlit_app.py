@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 import sqlite3
 import gdown
-import clipboard
 
 st.set_page_config(page_title='Visualizador de Arquivos', page_icon='📝')
 
@@ -20,7 +19,7 @@ if st.sidebar.button('Consulta SQL em CSVs'):
 if 'page' not in st.session_state:
     st.session_state.page = 'Visualizar Arquivos'
 
-def display_data(df, page_size=50000):
+def display_data(df, page_size=100000):
     num_pages = len(df) // page_size + 1
     page = st.slider('Selecione a página', 1, num_pages, 1)
     start = (page - 1) * page_size
@@ -44,13 +43,14 @@ if 'page' in st.session_state and st.session_state.page == "Visualizar Arquivos"
             if df.empty:
                 st.warning("O arquivo está vazio ou não contém dados válidos.")
             else:
-                st.write("Dados do arquivo:")
+                st.write("Colunas do arquivo:")
                 selected_columns = st.multiselect(
                     'Selecione as colunas para exibir',
                     options=df.columns.tolist(),
                     default=df.columns.tolist()
                 )
 
+                st.write("Dados do arquivo:")
                 if selected_columns:
                     df_filtered = df[selected_columns]
                     st.session_state['df_filtered'] = df_filtered
@@ -76,9 +76,8 @@ if 'page' in st.session_state and st.session_state.page == "Visualizar Arquivos"
 
                     valores_unicos_str = ', '.join(map(str, valores_unicos))
 
-                    if st.button("Copiar valores únicos para a área de transferência"):
-                        clipboard.copy(valores_unicos_str)
-                        st.write("Valores únicos copiados para a área de transferência!")
+                    st.text_area("Copie o texto abaixo:", value=valores_unicos_str)
+
         except Exception as e:
             st.error(f"Erro ao processar o arquivo: {e}")
             
@@ -91,7 +90,6 @@ elif st.session_state.page == "Ler do Google Drive":
 
     if drive_link:
         try:
-            # Extraindo o file_id a partir do link completo
             file_id = None
             if 'id=' in drive_link:
                 file_id = drive_link.split('id=')[-1]
@@ -139,9 +137,7 @@ elif st.session_state.page == "Ler do Google Drive":
 
                     valores_unicos_str = ', '.join(map(str, valores_unicos))
 
-                    if st.button("Copiar valores únicos para a área de transferência"):
-                        clipboard.copy(valores_unicos_str)
-                        st.write("Valores únicos copiados para a área de transferência!")
+                    st.text_area("Copie o texto abaixo:", value=valores_unicos_str)
             else:
                 st.error("Link inválido. Por favor, insira um link correto do Google Drive.")
         except Exception as e:
@@ -189,9 +185,7 @@ elif st.session_state.page == "Consulta SQL em CSVs":
 
                 valores_str = result.to_csv(index=False)
 
-                if st.button("Copiar dados para a área de transferência"):
-                    clipboard.copy(valores_str)
-                    st.write("Dados copiados para a área de transferência!")
+                st.text_area("Copie o texto abaixo:", value=valores_unicos_str)
                     
             except Exception as e:
                 st.error(f"Erro ao executar a consulta: {e}")
