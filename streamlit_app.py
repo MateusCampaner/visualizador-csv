@@ -17,6 +17,9 @@ if st.sidebar.button('Ler do Google Drive'):
 if st.sidebar.button('Consulta SQL em CSVs'):
     st.session_state.page = 'Consulta SQL em CSVs'
 
+if st.sidebar.button('Intersecção de arquivos de texto'):
+    st.session_state.page = 'Intersecção de arquivos de texto'
+
 if 'page' not in st.session_state:
     st.session_state.page = 'Visualizar Arquivos'
 
@@ -198,5 +201,34 @@ elif st.session_state.page == "Consulta SQL em CSVs":
                     
             except Exception as e:
                 st.error(f"Erro ao executar a consulta: {e}")
+
+if 'page' in st.session_state and st.session_state.page == "Intersecção de arquivos de texto":
+    st.header("Intersecção de arquivos de texto 📃")
+
+    st.subheader('Upload de Arquivo')
+    st.text("Extensões permitidas: TXT")
+    uploaded_files = st.file_uploader("Escolha os arquivos .txt", type="txt", accept_multiple_files=True)
+
+    def ler_arquivo_como_conjunto(arquivo):
+        conteudo = arquivo.read().decode('utf-8').strip()
+        valores = set(conteudo.split(','))
+        return valores
+
+    if uploaded_files:
+        conjuntos = []
+        for uploaded_file in uploaded_files:
+            conjuntos.append(ler_arquivo_como_conjunto(uploaded_file))
+
+        if len(conjuntos) > 1:
+            valores_comuns = set.intersection(*conjuntos)
+            quantidade_valores_comuns = len(valores_comuns)
+            
+            st.text_area("Valores Comuns", "\n".join(sorted(valores_comuns)))  # Exibe os valores comuns em uma área de texto
+
+            st.metric(label="Quantidade de valores únicos", value=quantidade_valores_comuns)
+        else:
+            st.write("Você deve fazer o upload de pelo menos dois arquivos para comparar.")
+    else:
+        st.write("Por favor, faça o upload dos arquivos para comparar.")
 
 
